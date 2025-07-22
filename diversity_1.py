@@ -22,7 +22,13 @@ CLASS_DICT = {
 colors = ['red', 'blue', 'green', 'orange']
 
 
-
+parts_array= [
+    ['head', 'torso'],  
+    ['torso', 'right front upper leg'],  # cow
+    ['torso', 'left front upper leg'],   # cow
+    ['torso', 'right back upper leg'],   # cow
+    ['torso', 'left back upper leg'],    # cow
+]
 class_dict_reverse = {v: k for k, v in CLASS_DICT.items()}
 
 def to_one_hot(num, num_classes):
@@ -71,7 +77,6 @@ def get_x_y_overlap(head_bbx, torso_bbx):
     if x_overlap > 0 and y_overlap > 0:
         return (x_overlap, y_overlap)
     else:
-        print("No overlap")
         return 0, 0
 
 
@@ -237,271 +242,348 @@ import yaml
 with open("/home/saksham.gupta/inference/diversity/config_diversity.yml", "r") as f:
     config = yaml.safe_load(f)
     
-SPLIT_ARRAY= []
 bruh_1 = ['train', 'test', 'val', 'playgen']
 #bruh_1 = ['train']
-
-#  I want a per plit, per class list of dictionaries (2)
-for variable_1 in bruh_1:
-    plt.clf() # top is from writing the points ion teh same canvas
+NET_ARRAY=[]
+for variable_2 in range(0,5):
+    SPLIT_ARRAY= []
     
-    if variable_1 == 'train' or variable_1 == 'test' or variable_1 == 'val':
+#  I want a per split, per class list of dictionaries (2)
+    for variable_1 in bruh_1:
+        plt.clf() # top is from writing the points ion teh same canvas
         
-        x_train_path = f"X_{variable_1}_combined_mask_data.np"
-        obj_class_train_path = f"class_v_{variable_1}_combined_mask_data.np"
-        images_train_path = f"img_{variable_1}_combined_mask_data.np"
-        x_train = np.load(os.path.join(data_root, x_train_path), allow_pickle=True)
-        obj_class_train = np.load(os.path.join(data_root, obj_class_train_path),allow_pickle=True)
-        images_train = np.load(os.path.join(data_root, images_train_path), allow_pickle=True)
-
-    # Maybe consider test and train combined too
-    elif variable_1 == 'playgen':
-        x_train = np.load(path_1, allow_pickle=True)
-        obj_class_train = np.load(path, allow_pickle=True)
-
-
-
-    # print(x_train.shape)
-    # print(x_train[0, :, 1:].shape)
-    train_bbxs = [x_train]
-
-    x_train[:, :, 1:] *=CANVAS_SIZE # except where the part checker
-
-    # print(x_train[0, :, 1:])
-
-    # print(to_one_hot(1, 10))
-    # only cow
-
-    #input ='bird'
-    bruh=['cow', 'bird', 'cat', 'dog','sheep'] # for playgen
-    # some problem with horse and person
-    # aeroplane, motorbike, bicycle 
-    # no human and horse for now
-    overlap_distribution_ht_class=[]
-    geometry_distribution_ht_class = []
-    cluster_list_new=[]
-    # for class
-    CLASS_ARRAY = []
-    
-    for input in bruh: #only iterating thorugh cow for now
-        print(input)
-        
-        label = class_dict_reverse.get(input)
-        # For playgen
-
-        if variable_1 == 'playgen':
-            one_hot_vector = [i for i in range(len(obj_class_train)) if np.all(obj_class_train[i] == to_one_hot(label, 7))]
-        # for Test,Train,Val
-        else:
-            one_hot_vector = [i for i in range(len(obj_class_train)) if np.all(obj_class_train[i] == to_one_hot(label, 11)) ]
-
-        cow_part_labels_reverse = {v: k for k, v in cow_part_labels.items()}
-        bird_part_labels_reverse = {v: k for k, v in bird_part_labels.items()}
-        cat_part_labels_reverse = {v: k for k, v in cat_part_labels.items()}    
-        dog_part_labels_reverse = {v: k for k, v in dog_part_labels.items()}
-        horse_part_labels_reverse = {v: k for k, v in horse_part_labels.items()}
-        sheep_part_labels_reverse = {v: k for k, v in cow_part_labels.items()}
-        person_part_labels_reverse = {v: k for k, v in person_part_labels.items()}
-
-        if input == 'cow':
-            part_labels_reverse = cow_part_labels_reverse
-        elif input == 'bird':
-            part_labels_reverse = bird_part_labels_reverse
-        elif input == 'cat':
-            part_labels_reverse = cat_part_labels_reverse
-        elif input == 'dog':
-            part_labels_reverse = dog_part_labels_reverse
-        elif input == 'horse':
-            part_labels_reverse = horse_part_labels_reverse
-        elif input == 'sheep':
-            part_labels_reverse = cow_part_labels_reverse
-        elif input == 'person':
-            part_labels_reverse = person_part_labels_reverse
-        elif input == 'aeroplane':
-            part_labels_reverse = aeroplane_part_labels
-        elif input == 'motorbike':
-            part_labels_reverse = motorbike_part_labels
-        elif input == 'bicycle':
-            part_labels_reverse = bicycle_part_labels
-
-
-        #parts =['head','torso']
-        # threw an error here, when I changed from torso to body
-        
-        #Parts Hyperparameter
-        
-        # Combinations for cow - upper leg
-        # parts = ['torso', 'right front upper leg'] # for cow
-        # parts= ['torso', 'left front upper leg'] # for cow
-        # parts= ['torso', 'right back upper leg'] # for cow
-        # parts= ['torso', 'left back upper leg'] # for cow
-        # parts= ['head', 'torso'] # for cow
-        
-        # For some classes,
-        # cow , dog, horse, sheep, bird, cat, person
-        parts= ['head', 'torso'] # for cow
-        
-        
-        # Only works for cow, bird, cat, dog,  sheep,
-        # doesn't work for  person, horse
-        
-        row=[]
-
-        for part in parts:
-            row.append(part_labels_reverse.get(part))
+        if variable_1 == 'train' or variable_1 == 'test' or variable_1 == 'val':
             
-        print("Row:", row)
+            x_train_path = f"X_{variable_1}_combined_mask_data.np"
+            obj_class_train_path = f"class_v_{variable_1}_combined_mask_data.np"
+            images_train_path = f"img_{variable_1}_combined_mask_data.np"
+            x_train = np.load(os.path.join(data_root, x_train_path), allow_pickle=True)
+            obj_class_train = np.load(os.path.join(data_root, obj_class_train_path),allow_pickle=True)
+            images_train = np.load(os.path.join(data_root, images_train_path), allow_pickle=True)
 
-        if variable_1 == 'playgen':
-            all_rows_except= np.array([i for i in range(16) if i!= row[0] and i!= row[1]])
-        else:
-            all_rows_except = np.array([i for i in range(18) if i!= row[0] and i!= row[1]])
-
-        print("All rows except:", all_rows_except)
+        # Maybe consider test and train combined too
+        elif variable_1 == 'playgen':
+            x_train = np.load(path_1, allow_pickle=True)
+            obj_class_train = np.load(path, allow_pickle=True)
 
 
-      # this is for playgen inanimate data
 
-        x_train_1 = x_train[one_hot_vector]
-        #isolating cases where there are only head and torso
+        # print(x_train.shape)
+        # print(x_train[0, :, 1:].shape)
+        train_bbxs = [x_train]
+
+        x_train[:, :, 1:] *=CANVAS_SIZE # except where the part checker
+
+        # print(x_train[0, :, 1:])
+
+        # print(to_one_hot(1, 10))
+        # only cow
+
+        #input ='bird'
+        bruh=['cow', 'bird', 'cat', 'dog','sheep','horse','person'] # for playgen
+        # bruh =['cow']
+        # some problem with horse and person
+        # aeroplane, motorbike, bicycle 
+        # no human and horse for now
+
+        # for class
+        CLASS_ARRAY = []
         
-        # images/ layouts where only these parts are present
-        #  Playgen
-        
-        # You don't pass x_train in this? 
-        # if config['parts'] == 'limited':
-        #     L = []
-        #     for i in range(len(x_train)):
-        #         shape_like = x_train[i][0]  # Pick any part to get the correct shape
-        #         Zero = np.zeros_like(shape_like)
-        #         true_counter = True  
+        for input in bruh: #only iterating thorugh cow for now
+            print(input)
+            
+            label = class_dict_reverse.get(input)
+            # For playgen
 
-        #         for j in all_rows_except:
-        #             if not np.all(x_train[i][j] == Zero):
-        #                 true_counter = False
-        #                 break  # No need to check further if one is non-zero
+            if variable_1 == 'playgen':
+                one_hot_vector = [i for i in range(len(obj_class_train)) if np.all(obj_class_train[i] == to_one_hot(label, 7))]
+            # for Test,Train,Val
+            else:
+                one_hot_vector = [i for i in range(len(obj_class_train)) if np.all(obj_class_train[i] == to_one_hot(label, 11)) ]
 
-        #         if true_counter:
-        #             L.append(i)
-        #         else:
-        #             print(f"Example {i}: No cases found with only head and torso bounding boxes.")
+            cow_part_labels_reverse = {v: k for k, v in cow_part_labels.items()}
+            bird_part_labels_reverse = {v: k for k, v in bird_part_labels.items()}
+            cat_part_labels_reverse = {v: k for k, v in cat_part_labels.items()}    
+            dog_part_labels_reverse = {v: k for k, v in dog_part_labels.items()}
+            horse_part_labels_reverse = {v: k for k, v in horse_part_labels.items()}
+            sheep_part_labels_reverse = {v: k for k, v in cow_part_labels.items()}
+            person_part_labels_reverse = {v: k for k, v in person_part_labels.items()}
+
+            if input == 'cow':
+                part_labels_reverse = cow_part_labels_reverse
+            elif input == 'bird':
+                part_labels_reverse = bird_part_labels_reverse
+            elif input == 'cat':
+                part_labels_reverse = cat_part_labels_reverse
+            elif input == 'dog':
+                part_labels_reverse = dog_part_labels_reverse
+            elif input == 'horse':
+                part_labels_reverse = horse_part_labels
+            elif input == 'sheep':
+                part_labels_reverse = cow_part_labels_reverse
+            elif input == 'person':
+                part_labels_reverse = person_part_labels
+            elif input == 'aeroplane':
+                part_labels_reverse = aeroplane_part_labels
+            elif input == 'motorbike':
+                part_labels_reverse = motorbike_part_labels
+            elif input == 'bicycle':
+                part_labels_reverse = bicycle_part_labels
 
 
-        #     x_train_cow = x_train[L]  # Filter to only those with head and torso
+            #parts =['head','torso']
+            # threw an error here, when I changed from torso to body
+            
+            #Parts Hyperparameter
+            
+            # Combinations for cow - upper leg
+            # parts = ['torso', 'right front upper leg'] # for cow
+            # parts= ['torso', 'left front upper leg'] # for cow
+            # parts= ['torso', 'right back upper leg'] # for cow
+            # parts= ['torso', 'left back upper leg'] # for cow
+            # parts= ['head', 'torso'] # for cow
+            
+            # For some classes,
+            # cow , dog, horse, sheep, bird, cat, person
+            if input == 'cow' or input == 'sheep':
+                part_array = [
+                    ['head', 'torso'],
+                    ['torso', 'right front upper leg'],
+                    ['torso', 'left front upper leg'],
+                    ['torso', 'right back upper leg'],
+                    ['torso', 'left back upper leg']
+                ]
+                parts = part_array[variable_2]
 
+            elif input == 'bird':
+                part_array = [
+                    ['head', 'torso'],
+                    ['torso', 'right wing'],
+                    ['torso', 'left wing'],
+                    ['torso', 'right leg'],
+                    ['torso', 'left leg']
+                ]
+                parts = part_array[variable_2]
+
+            elif input == 'cat' or input == 'dog':
+                part_array = [
+                    ['head', 'torso'],
+                    ['torso', 'left front leg'],
+                    ['torso', 'right front leg'],
+                    ['torso', 'left back leg'],
+                    ['torso', 'right back leg']
+                ]
+                parts = part_array[variable_2]
+
+            elif input == 'horse':
+                part_array = [
+                    ['head', 'torso'],
+                    ['torso', 'left front upper leg'],
+                    ['torso', 'right front upper leg'],
+                    ['torso', 'left back upper leg'],
+                    ['torso', 'right back upper leg']
+                ]
+                parts = part_array[variable_2]
+
+            elif input == 'person':
+                part_array = [
+                    ['head', 'torso'],
+                    ['torso', 'left upper arm'],
+                    ['torso', 'right upper arm'],
+                    ['torso', 'left lower leg'],
+                    ['torso', 'right lower leg']
+                ]
+                parts = part_array[variable_2]
+
+            
+            
+            # Only works for cow, bird, cat, dog,  sheep,
+            # doesn't work for  person, horse
+            
+            row=[]
+
+            for part in parts:
+                row.append(part_labels_reverse.get(part))
                 
-        # Bounding boxes for head and torso
+
+            # Only for the limimted parts generation
+            if variable_1 == 'playgen':
+                all_rows_except= np.array([i for i in range(16) if i!= row[0] and i!= row[1]])
+            else:
+                all_rows_except = np.array([i for i in range(18) if i!= row[0] and i!= row[1]])
+
+
+        # this is for playgen inanimate data
+
+            x_train_1 = x_train[one_hot_vector]
+            #isolating cases where there are only head and torso
+            
+            # images/ layouts where only these parts are present
+            #  Playgen
+            
+            # You don't pass x_train in this? 
+            # if config['parts'] == 'limited':
+            #     L = []
+            #     for i in range(len(x_train)):
+            #         shape_like = x_train[i][0]  # Pick any part to get the correct shape
+            #         Zero = np.zeros_like(shape_like)
+            #         true_counter = True  
+
+            #         for j in all_rows_except:
+            #             if not np.all(x_train[i][j] == Zero):
+            #                 true_counter = False
+            #                 break  # No need to check further if one is non-zero
+
+            #         if true_counter:
+            #             L.append(i)
+            #         else:
+            #             print(f"Example {i}: No cases found with only head and torso bounding boxes.")
+
+
+            #     x_train_cow = x_train[L]  # Filter to only those with head and torso
+
+                    
+            # Bounding boxes for head and torso
+            
+            bounding_box_1 = {'xmin': [], 'xmax': [], 'ymin': [], 'ymax': []}
+            bounding_box_2 = {'xmin': [], 'xmax': [], 'ymin': [], 'ymax': []}
+
+            actually_present =[] # list of indices present
+            for j,i in enumerate(x_train_1):
+                # print("This the bounding box for head and right front upper leg",i[row[0]],i[row[1]])
+                part_present_1,_,_,_,_=i[row[0]]
+                part_present_2,_,_,_,_=i[row[1]]
+
+                if part_present_1 == 0 or part_present_2 == 0:
+                #   print("one of the is not present, skipping")
+                    continue
+                
+                part_present_1,xmin,ymin,xmax,ymax=i[row[0]]
+                # Based on the parts - you choose which dictionary to append it to
+                bounding_box_1['xmin'].append(xmin)
+                bounding_box_1['xmax'].append(xmax)
+                bounding_box_1['ymin'].append(ymin)
+                bounding_box_1['ymax'].append(ymax)
+
+                part_present_2,xmin,ymin,xmax,ymax=i[row[1]]
+                bounding_box_2['xmin'].append(xmin)
+                bounding_box_2['xmax'].append(xmax)
+                bounding_box_2['ymin'].append(ymin)
+                bounding_box_2['ymax'].append(ymax)
+                
+            # train split - cow - normal
+                actually_present.append(j)
+                
+            interm_tuple = (bounding_box_1, bounding_box_2) 
+            CLASS_ARRAY.append(interm_tuple)
+            print(f"parts_actually present {variable_2} {variable_1} {input} {len(actually_present)}")
+            print("Class array:", len(CLASS_ARRAY))
+
+
+        SPLIT_ARRAY.append(CLASS_ARRAY)
+        print("Split array:", len(SPLIT_ARRAY))
+    NET_ARRAY.append(SPLIT_ARRAY)
+ 
+
+  
+# The below function uses
+# 
+# s 
+def combination_function(split,object_class, parts_array_number, configuration):
+    
+    arr = NET_ARRAY[parts_array_number]
+    
+    if split =='train':
+        Arr_1 = arr[0]
+    if split == 'playgen':
+        Arr_1 = arr[1]
+    
+    arr_1 = Arr_1[bruh.index(object_class)]
+    
         
-        bounding_box_1 = {'xmin': [], 'xmax': [], 'ymin': [], 'ymax': []}
-        bounding_box_2 = {'xmin': [], 'xmax': [], 'ymin': [], 'ymax': []}
-
-        actually_present =[] # list of indices present
-        for j,i in enumerate(x_train_1):
-            # print("This the bounding box for head and right front upper leg",i[row[0]],i[row[1]])
-            part_present_1,_,_,_,_=i[row[0]]
-            part_present_2,_,_,_,_=i[row[1]]
-
-            if part_present_1 == 0 or part_present_2 == 0:
-             #   print("one of the is not present, skipping")
-                continue
-            
-            part_present_1,xmin,ymin,xmax,ymax=i[row[0]]
-            # Based on the parts - you choose which dictionary to append it to
-            bounding_box_1['xmin'].append(xmin)
-            bounding_box_1['xmax'].append(xmax)
-            bounding_box_1['ymin'].append(ymin)
-            bounding_box_1['ymax'].append(ymax)
-
-            part_present_2,xmin,ymin,xmax,ymax=i[row[1]]
-            bounding_box_2['xmin'].append(xmin)
-            bounding_box_2['xmax'].append(xmax)
-            bounding_box_2['ymin'].append(ymin)
-            bounding_box_2['ymax'].append(ymax)
-            
-        # train split - cow - normal
-            actually_present.append(j)
-            
-        interm_tuple = (bounding_box_1, bounding_box_2) 
-        CLASS_ARRAY.append(interm_tuple)
-        print("Class array:", len(CLASS_ARRAY))
-
-    SPLIT_ARRAY.append(CLASS_ARRAY)
-    print("Split array:", len(SPLIT_ARRAY))
-
-      
-# The below fucntion uses 
-def combination_function(split,object_class, parts_array, configuration):
-    # Making all individual graphs first , then assessing permutations and combinations
-    # WILL add parts array eventually in the fucntion
-    # Across all instance in the split, for a given object class, get the bounding boxes of the head and torso
-    # Access all is the above froma global array
-    # # configurations : overlap geometry cluster - corresponding graphs and dispersion metrics
-    # if split == 'train':
-    #     print("Train")
-    #     # consider SPLIT_ARRAY[0]
-    # if object_class=='cow':
-    #     print("Cow")
-    #     # consider SPLIT_ARRAY[0][0] # just get teh index from the bruh_1 array
-    #     # If configuration is overlap
-    Array = SPLIT_ARRAY[0][0]  # Assuming you want the first class in the first split
     if configuration == 'overlap':
         # One graph
         # instead of a tuple make a dictionary
         overlap=[]
+        plt.clf()
         #  Just two dicts at a time - LATER
-        dict_1 =Array[0] # - PART -1
-        dict_2 =Array[1] # - PART -2
+        dict_1 =arr_1[0] # - PART -1
+        dict_2 =arr_1[1] # - PART -2
         for i in range(len(dict_1['xmin'])):
             overlap.append(get_x_y_overlap((dict_1['xmin'][i],dict_1['xmax'][i],dict_1['ymin'][i],dict_1['ymax'][i]),(dict_2['xmin'][i],dict_2['xmax'][i],dict_2['ymin'][i],dict_2['ymax'][i])))
         #plot graph:
         overlap = [pt for pt in overlap if pt != (0, 0)]  # Filter out zero overlaps
-        colors = ['red', 'blue', 'green', 'orange']
             # for some reason it makes individual graphs for each class as well - got it
             # this loop runs per class
         x_1_vals = [pt[0] for pt in overlap]
         y_1_vals = [pt[1] for pt in overlap]
-        plt.scatter(x_1_vals, y_1_vals, color=colors[0], label=bruh[0])
-        plt.xlabel("X_overlap")
-        plt.ylabel("Y_overlap")
-        plt.title("Overlap Plot of Four Classes")
-        plt.legend()
-        plt.grid(True)
-        # for individual plots -add p
-        plt.savefig(f"/home/saksham.gupta/inference/diversity/overlap_1.png")
-    
+        
+        plt.figure(figsize=(6, 6))
+        plt.scatter(y_1_vals, x_1_vals, color='red', label='Cluster Points')  # Note: x and y swapped
+
+        plt.xlabel("X (increasing →)")
+        plt.ylabel("Y (increasing ↓)")
+
+        # Add title with point count
+        num_points = len(dict_1['xmin'])
+        plt.title(f"Overlap plot - {num_points} points")
+
+        os.makedirs('/home/saksham.gupta/inference/diversity/overlap', exist_ok=True)
+        filename = f"/home/saksham.gupta/inference/diversity/overlap/overlap_{split}_{object_class}_{parts_array[parts_array_number]}.png"
+        plt.savefig(filename, bbox_inches='tight')
+        plt.close()
+        plt.clf()
 
     if configuration == 'geometric':
         geometry=[]
         # one graph
         #  Just two dicts at a time - LATER
-        dict_1 =Array[0] # - PART -1
-        dict_2 =Array[1] # - PART -2
+        dict_1 =arr_1[0] # - PART -1
+        dict_2 =arr_1[1] # - PART -2
         for i in range(len(dict_1['xmin'])):
             geometry.append(get_row_theta((dict_1['xmin'][i],dict_1['xmax'][i],dict_1['ymin'][i],dict_1['ymax'][i]),(dict_2['xmin'][i],dict_2['xmax'][i],dict_2['ymin'][i],dict_2['ymax'][i])))
         #plot graph:
-        colors = ['red', 'blue', 'green', 'orange']
+
             # for some reason it makes individual graphs for each class as well - got it
             # this loop runs per class
         x_1_vals = [pt[0] for pt in geometry]
         y_1_vals = [pt[1] for pt in geometry]
-        plt.scatter(x_1_vals, y_1_vals, color=colors[0], label=bruh[0])
-        plt.xlabel("Angle")
-        plt.ylabel("Magnitude")
-        plt.title("Geometry Plot of Four Classes")
-        plt.legend()
-        plt.grid(True)
-        # for individual plots -add p
-        plt.savefig(f"/home/saksham.gupta/inference/diversity/geometry_1.png")
         
-    if configuration == 'midpoints':
+        
+        plt.figure(figsize=(6, 6))
+        plt.scatter(x_1_vals, y_1_vals, color='red', label='Geometric Points')  # Note: x and y swapped
+
+        
+        plt.xlabel("X ")
+        plt.ylabel("Y ")
+
+        
+        
+        
+        num_points = len(dict_1['xmin'])
+ 
+        plt.title(f"Geometric Plot - {num_points} points")
+
+        # Save figure
+        os.makedirs('/home/saksham.gupta/inference/diversity/geometric', exist_ok=True)
+        
+        filename = f"/home/saksham.gupta/inference/diversity/geometric/geometric_{split}_{object_class}_{parts_array[parts_array_number]}.png"
+        plt.savefig(filename, bbox_inches='tight')
+        plt.close()
+
+        
+    if configuration == 'cluster':
         # Two graphs
         cluster_list_1 = []
         cluster_list_2 = []
         # one graph
         #  Just two dicts at a time - LATER
-        dict_1 =Array[0] # - PART -1
-        dict_2 =Array[1] # - PART -2
+        print(type(arr_1))
+        print(len(arr_1))
+        dict_1 =arr_1[0] # - PART -1
+        dict_2 =arr_1[1] # - PART -2
         plt.clf()
+
         
         for i in range(len(dict_1['xmin'])):
 
@@ -511,44 +593,80 @@ def combination_function(split,object_class, parts_array, configuration):
             cluster_list_2.append(cluster((dict_2['xmin'][i],dict_2['xmax'][i],dict_2['ymin'][i],dict_2['ymax'][i])))
             
         plt.clf()
-          
         colors = ['red', 'blue', 'green', 'orange']
             # for some reason it makes individual graphs for each class as well - got it
             # this loop runs per class
         x_1_vals = [pt[0] for pt in cluster_list_1]
         y_1_vals = [pt[1] for pt in cluster_list_1]
-        pdb.set_trace()
-        
-        plt.scatter(y_1_vals, x_1_vals, color=colors[0], label=bruh[0])
-        plt.xlabel("Angle")
-        plt.ylabel("Magnitude")
-        plt.title("Geometry Plot of Four Classes")
-        plt.legend()
-        plt.grid(True)
-        # for individual plots -add p
-        plt.savefig(f"/home/saksham.gupta/inference/diversity/cluster_1.png")
+        plt.figure(figsize=(6, 6))
+        plt.scatter(y_1_vals, x_1_vals, color='red', label='Cluster Points')  # Note: x and y swapped
+
+        # Invert axes to match desired orientation
+        plt.gca().invert_yaxis()  # Makes x increase down
+        plt.gca().xaxis.tick_top()  # Moves x-axis to top
+        plt.gca().xaxis.set_label_position('top')
+        plt.xlabel("Y (increasing →)")
+        plt.ylabel("X (increasing ↓)")
+
+        # Add title with point count
+        num_points = len(dict_1['xmin'])
+        plt.title(f"Cluster plot - {num_points} points")
+
+        # Save figure
+        filename = f"/home/saksham.gupta/inference/diversity/cluster_{split}_{object_class}_{parts_array[parts_array_number]}_0.png"
+        plt.savefig(filename, bbox_inches='tight')
+        plt.close()
         plt.clf()
+        
+        
             # for some reason it makes individual graphs for each class as well - got it
             # this loop runs per class
         x_1_vals = [pt[0] for pt in cluster_list_2]
         y_1_vals = [pt[1] for pt in cluster_list_2]
-        plt.scatter(x_1_vals, y_1_vals, color=colors[0], label=bruh[0])
-        plt.xlabel("Angle")
-        plt.ylabel("Magnitude")
-        plt.title("Geometry Plot of Four Classes")
-        plt.legend()
-        plt.grid(True)
-        # for individual plots -add p
-        plt.savefig(f"/home/saksham.gupta/inference/diversity/cluster_2.png")
-            
+        plt.figure(figsize=(6, 6))
+        plt.scatter(x_1_vals, y_1_vals, color='red', label='Cluster Points')  # Note: x and y swapped
+        # Invert axes to match desired orientation
+        plt.gca().invert_yaxis()  # Makes x increase down
+        plt.gca().xaxis.tick_top()  # Moves x-axis to top
+        plt.gca().xaxis.set_label_position('top')
+        plt.xlabel("Y (increasing →)")
+        plt.ylabel("X (increasing ↓)")
+
+        # Add title with point count
+        num_points = len(dict_1['xmin'])
+        plt.title(f"Cluster plot - {num_points} points")
+
+        # Save figure
+        os.makedirs('/home/saksham.gupta/inference/diversity/cluster', exist_ok=True)
+        
+        filename = f"/home/saksham.gupta/inference/diversity/cluster/cluster_{split}_{object_class}_{parts_array[parts_array_number]}_1.png"
+        plt.savefig(filename, bbox_inches='tight')
+        plt.close()
+        plt.clf()
+                    
     
     
     
     
         
 
-        
-        
+        # Cluster
+for i in ['train','playgen']:
+    for j in ['cow', 'bird', 'cat', 'dog','sheep', 'person', 'horse',]:
+        for k in range(0,5):
+            combination_function(i, j, k, 'cluster')
 
-combination_function('train', 'cow', ['head', 'torso'], 'midpoints')
+        #  Overlap - pull up the correpsonfing bounding box images too
+        # check for the containement cases for the torso and upper legs
+# for i in ['train','playgen']:
+#     for j in ['cow', 'bird', 'cat', 'dog','sheep', 'person', 'horse',]:
+#         for k in range(0,5):
+#             combination_function(i, j, k, 'overlap')
+
+
+# for i in ['train','playgen']:
+#     for j in ['cow', 'bird', 'cat', 'dog','sheep', 'person', 'horse',]:
+#         for k in range(0,5):
+#             combination_function(i, j, k, 'geometric')
+
         
