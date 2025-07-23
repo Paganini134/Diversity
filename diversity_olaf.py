@@ -1,3 +1,6 @@
+# /home/saksham.gupta/inference/Olaf_dataset/matrices/splits/class_v_train_combined_mask_data.np
+
+
 import numpy as np
 import sklearn
 import os
@@ -37,11 +40,6 @@ def to_one_hot(num, num_classes):
     one_hot[num] = 1
     return one_hot
 
-def coefficient_of_variation(data):
-    data = np.array(data)
-    mean = np.mean(data)
-    std = np.std(data)
-    return std / abs(mean) if mean != 0 else np.inf
 
 def get_x_y_overlap(head_bbx, torso_bbx):
     x1_min, x1_max, y1_min, y1_max = head_bbx
@@ -221,7 +219,8 @@ pottedplant_part_labels = {0:'body', 1:'pot', 2:'plant'}
 
 import sys
 sys.path.append("/home/saksham.gupta/inference/Palgo_pipeline/Palgo-main/src/ImagegenDataProcessing/utils/")
-data_root ="/ssd_scratch/saksham.gupta/data/"
+# data_root ="/ssd_scratch/saksham.gupta/data/"
+data_root = "/archive/projects/palgo/syn_data_animate/"
 #import data set matrices
 import constants
 CANVAS_SIZE = 660
@@ -235,7 +234,7 @@ import yaml
 with open("/home/saksham.gupta/inference/diversity/config_diversity.yml", "r") as f:
     config = yaml.safe_load(f)
     
-bruh_1 = ['train', 'test', 'val', 'playgen']
+bruh_1 = ['train', 'test', 'val'] # 18,5 format
 #bruh_1 = ['train']
 NET_ARRAY=[]
 for variable_2 in range(0,5):
@@ -246,7 +245,8 @@ for variable_2 in range(0,5):
         plt.clf() # top is from writing the points ion teh same canvas
         
         if variable_1 == 'train' or variable_1 == 'test' or variable_1 == 'val':
-            
+            # /home/saksham.gupta/inference/Olaf_dataset/matrices/splits/class_v_train_combined_mask_data.np
+
             x_train_path = f"X_{variable_1}_combined_mask_data.np"
             obj_class_train_path = f"class_v_{variable_1}_combined_mask_data.np"
             images_train_path = f"img_{variable_1}_combined_mask_data.np"
@@ -271,8 +271,10 @@ for variable_2 in range(0,5):
 
         # print(to_one_hot(1, 10))
         # only cow
+        print(x_train.shape)
 
         #input ='bird'
+        # horse?
         bruh=['cow', 'bird', 'cat', 'dog','sheep','horse','person'] # for playgen
         # bruh =['cow']
         # some problem with horse and person
@@ -287,14 +289,13 @@ for variable_2 in range(0,5):
             
             label = class_dict_reverse.get(input)
             # For playgen
+            print(obj_class_train.shape)
 
             if variable_1 == 'playgen':
                 one_hot_vector = [i for i in range(len(obj_class_train)) if np.all(obj_class_train[i] == to_one_hot(label, 7))]
-                print(f"Shape of X_train {x_train.shape}")
-
             # for Test,Train,Val
             else:
-                one_hot_vector = [i for i in range(len(obj_class_train)) if np.all(obj_class_train[i] == to_one_hot(label, 11)) ]
+                one_hot_vector = [i for i in range(len(obj_class_train)) if np.all(obj_class_train[i] == to_one_hot(label, 10)) ]
 
             cow_part_labels_reverse = {v: k for k, v in cow_part_labels.items()}
             bird_part_labels_reverse = {v: k for k, v in bird_part_labels.items()}
@@ -371,6 +372,7 @@ for variable_2 in range(0,5):
                 parts = part_array[variable_2]
 
             elif input == 'horse':
+
                 part_array = [
                     ['head', 'torso'],
                     ['torso', 'left front upper leg'],
@@ -484,14 +486,14 @@ for variable_2 in range(0,5):
 # The below function uses
 # 
 # s 
-def combination_function(split,object_class, parts_array_number, configuration,compare_with=None):
+def combination_function(split,object_class, parts_array_number, configuration):
     
     arr = NET_ARRAY[parts_array_number]
     
     if split =='train':
         Arr_1 = arr[0]
     if split == 'playgen':
-        Arr_1 = arr[-1]
+        Arr_1 = arr[1]
     
     arr_1 = Arr_1[bruh.index(object_class)]
     
@@ -525,16 +527,13 @@ def combination_function(split,object_class, parts_array_number, configuration,c
 
         plt.xlabel("X (increasing →)")
         plt.ylabel("Y (increasing ↓)")
-        coeff_var_x = coefficient_of_variation(x_1_vals)
-        coeff_var_y = coefficient_of_variation(y_1_vals)
 
-        
         # Add title with point count
         num_points = len(dict_1['xmin'])
-        plt.title(f"Overlap plot - {num_points} points - {coeff_var_x:.2f} (X), {coeff_var_y:.2f} (Y)")
+        plt.title(f"Overlap plot - {num_points} points")
 
-        os.makedirs('/home/saksham.gupta/inference/diversity/overlap', exist_ok=True)
-        filename = f"/home/saksham.gupta/inference/diversity/overlap/overlap_{split}_{object_class}_{parts_array[parts_array_number]}.png"
+        os.makedirs('/home/saksham.gupta/inference/diversity_olaf/overlap', exist_ok=True)
+        filename = f"/home/saksham.gupta/inference/diversity_olaf/overlap/overlap_{split}_{object_class}_{parts_array[parts_array_number]}.png"
         plt.savefig(filename, bbox_inches='tight')
         plt.close()
         plt.clf()
@@ -548,36 +547,31 @@ def combination_function(split,object_class, parts_array_number, configuration,c
         for i in range(len(dict_1['xmin'])):
             geometry.append(get_row_theta((dict_1['xmin'][i],dict_1['xmax'][i],dict_1['ymin'][i],dict_1['ymax'][i]),(dict_2['xmin'][i],dict_2['xmax'][i],dict_2['ymin'][i],dict_2['ymax'][i])))
         #plot graph:
-        
 
             # for some reason it makes individual graphs for each class as well - got it
             # this loop runs per class
         x_1_vals = [pt[0] for pt in geometry]
         y_1_vals = [pt[1] for pt in geometry]
         
-        coeff_var_x = coefficient_of_variation(x_1_vals)
-        coeff_var_y = coefficient_of_variation(y_1_vals)
-
-        
         
         plt.figure(figsize=(6, 6))
         plt.scatter(x_1_vals, y_1_vals, color='red', label='Geometric Points')  # Note: x and y swapped
 
         
-        plt.xlabel("Magnitude (increasing →)")
-        plt.ylabel("Angle ")
+        plt.xlabel("X ")
+        plt.ylabel("Y ")
 
         
         
         
         num_points = len(dict_1['xmin'])
  
-        plt.title(f"Geometric Plot - {num_points} -{coeff_var_x:.2f}, {coeff_var_y:.2f} ")
+        plt.title(f"Geometric Plot - {num_points} points")
 
         # Save figure
-        os.makedirs('/home/saksham.gupta/inference/diversity/geometric', exist_ok=True)
+        os.makedirs('/home/saksham.gupta/inference/diversity_olaf/geometric', exist_ok=True)
         
-        filename = f"/home/saksham.gupta/inference/diversity/geometric/geometric_{split}_{object_class}_{parts_array[parts_array_number]}.png"
+        filename = f"/home/saksham.gupta/inference/diversity_olaf/geometric/geometric_{split}_{object_class}_{parts_array[parts_array_number]}.png"
         plt.savefig(filename, bbox_inches='tight')
         plt.close()
 
@@ -614,15 +608,15 @@ def combination_function(split,object_class, parts_array_number, configuration,c
         plt.gca().invert_yaxis()  # Makes x increase down
         plt.gca().xaxis.tick_top()  # Moves x-axis to top
         plt.gca().xaxis.set_label_position('top')
-        plt.xlabel("x (increasing →)")
-        plt.ylabel("y (increasing ↓)")
+        plt.xlabel("Y (increasing →)")
+        plt.ylabel("X (increasing ↓)")
 
         # Add title with point count
         num_points = len(dict_1['xmin'])
         plt.title(f"Cluster plot - {num_points} points")
 
         # Save figure
-        filename = f"/home/saksham.gupta/inference/diversity/cluster_{split}_{object_class}_{parts_array[parts_array_number]}_0.png"
+        filename = f"/home/saksham.gupta/inference/diversity_olaf/cluster_{split}_{object_class}_{parts_array[parts_array_number]}_0.png"
         plt.savefig(filename, bbox_inches='tight')
         plt.close()
         plt.clf()
@@ -646,9 +640,9 @@ def combination_function(split,object_class, parts_array_number, configuration,c
         plt.title(f"Cluster plot - {num_points} points")
 
         # Save figure
-        os.makedirs('/home/saksham.gupta/inference/diversity/cluster', exist_ok=True)
+        os.makedirs('/home/saksham.gupta/inference/diversity_olaf/cluster', exist_ok=True)
         
-        filename = f"/home/saksham.gupta/inference/diversity/cluster/cluster_{split}_{object_class}_{parts_array[parts_array_number]}_1.png"
+        filename = f"/home/saksham.gupta/inference/diversity_olaf/cluster/cluster_{split}_{object_class}_{parts_array[parts_array_number]}_1.png"
         plt.savefig(filename, bbox_inches='tight')
         plt.close()
         plt.clf()
@@ -667,18 +661,18 @@ def combination_function(split,object_class, parts_array_number, configuration,c
 
         #  Overlap - pull up the correpsonfing bounding box images too
         # check for the containement cases for the torso and upper legs
-# print("="*90)
-# for i in ['train','playgen']:
-#     for j in ['cow', 'bird', 'cat', 'dog','sheep', 'person', 'horse',]:
-#         for k in range(0,5):
-#             print(f"Running overlap for {i}, {j}, {k}")
-#             combination_function(i, j, k, 'overlap')
-# # 
-
+print("="*90)
 for i in ['train','playgen']:
     for j in ['cow', 'bird', 'cat', 'dog','sheep', 'person', 'horse',]:
         for k in range(0,5):
-            combination_function(i, j, k, 'geometric')
+            print(f"Running overlap for {i}, {j}, {k}")
+            combination_function(i, j, k, 'overlap')
+
+
+# for i in ['train','playgen']:
+#     for j in ['cow', 'bird', 'cat', 'dog','sheep', 'person', 'horse',]:
+#         for k in range(0,5):
+#             combination_function(i, j, k, 'geometric')
 
         
         
